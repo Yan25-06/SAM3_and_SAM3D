@@ -6,9 +6,9 @@ defaults:
 # Paths Configuration (Chage this to your own paths)
 # ============================================================================
 paths:
-  roboflow_vl_100_root: "/kaggle/input/datasets/lhuyton"
-  experiment_log_dir: "/kaggle/working/sam3_logs"
-  bpe_path: "/kaggle/working/sam3/sam3/assets/bpe_simple_vocab_16e6.txt.gz" # This should be under sam3/assets/bpe_simple_vocab_16e6.txt.gz
+  roboflow_vl_100_root: /kaggle/input/datasets/lhuyton/roboflow-2
+  experiment_log_dir: /kaggle/working/experiment_logs
+  bpe_path: /kaggle/working/sam3/sam3/assets/bpe_simple_vocab_16e6.txt.gz # This should be under sam3/assets/bpe_simple_vocab_16e6.txt.gz
 
 # Roboflow dataset configuration
 roboflow_train:
@@ -185,11 +185,11 @@ scratch:
     cost_giou: 2.0
     alpha: 0.25
     gamma: 2
-    stable: True
+    stable: False
   scale_by_find_batch_size: True
 
   # Image processing parameters
-  resolution: 512
+  resolution: 1008
   consistent_transform: False
   max_ann_per_img: 200
 
@@ -200,8 +200,8 @@ scratch:
   val_norm_std: [0.5, 0.5, 0.5]
 
   # Training parameters
-  num_train_workers: 2
-  num_val_workers: 0
+  num_train_workers: 8
+  num_val_workers: 4
   max_data_epochs: 20
   target_epoch_size: 1500
   hybrid_repeats: 1
@@ -209,17 +209,17 @@ scratch:
   gather_pred_via_filesys: false
 
   # Learning rate and scheduler parameters
-  lr_scale: 0.005
+  lr_scale: 0.1
   lr_transformer: ${times:8e-4,${scratch.lr_scale}}
   lr_vision_backbone: ${times:2.5e-4,${scratch.lr_scale}}
   lr_language_backbone: ${times:5e-5,${scratch.lr_scale}}
   lrd_vision_backbone: 0.9
   wd: 0.1
-  scheduler_timescale: 50
-  scheduler_warmup: 100
-  scheduler_cooldown: 50
+  scheduler_timescale: 20
+  scheduler_warmup: 20
+  scheduler_cooldown: 20
 
-  val_batch_size: 1
+  val_batch_size: 4
   collate_fn_val:
     _target_: sam3.train.data.collator.collate_fn_api
     _partial_: true
@@ -235,7 +235,6 @@ scratch:
     repeats: ${scratch.hybrid_repeats}
     dict_key: all
     with_seg_masks: ${scratch.enable_segmentation} # Note: Set this to true if using segmentation masks!
-    # num_chunks: ${scratch.gradient_accumulation_steps}
 
 # ============================================================================
 # Trainer Configuration
@@ -247,7 +246,7 @@ trainer:
   skip_saving_ckpts: false
   empty_gpu_mem_cache_after_eval: True
   skip_first_val: True
-  max_epochs: 10
+  max_epochs: 20
   accelerator: cuda
   seed_value: 123
   val_epoch_freq: 10
@@ -274,8 +273,8 @@ trainer:
         load_segmentation: ${scratch.enable_segmentation}
         max_ann_per_img: 500000
         multiplier: 1
-        max_train_queries: 1000
-        max_val_queries: 1000
+        max_train_queries: 50000
+        max_val_queries: 50000
         training: true
         use_caching: False
         img_folder: ${paths.roboflow_vl_100_root}/${roboflow_train.supercategory}/train/
@@ -316,10 +315,8 @@ trainer:
   model:
     _target_: sam3.model_builder.build_sam3_image_model
     bpe_path: ${paths.bpe_path}
-    device: cuda
+    device: cpus
     eval_mode: false
-    checkpoint_path: null
-    load_from_HF: false
     enable_segmentation: ${scratch.enable_segmentation} # Warning: Enable this if using segmentation.
 
   meters:
@@ -345,11 +342,11 @@ trainer:
       amp_dtype: bfloat16
 
     optimizer:
-      _target_: bitsandbytes.optim.AdamW8bit
+      _target_: torch.optim.AdamW
 
     gradient_clip:
       _target_: sam3.train.optim.optimizer.GradientClipper
-      max_norm: 0.01
+      max_norm: 0.1
       norm_type: 2
 
     param_group_modifiers:
@@ -399,7 +396,7 @@ trainer:
 
   checkpoint:
     save_dir: ${launcher.experiment_log_dir}/checkpoints
-    save_freq: 5  # 0 only last checkpoint is saved.
+    save_freq: 0  # 0 only last checkpoint is saved.
 
   logging:
     tensorboard_writer:
@@ -417,7 +414,7 @@ trainer:
 
 launcher:
   num_nodes: 1
-  gpus_per_node: 2
+  gpus_per_node: 1
   experiment_log_dir: ${paths.experiment_log_dir}
   multiprocessing_context: forkserver
 
@@ -426,13 +423,13 @@ submitit:
   partition: null
   qos: null
   timeout_hour: 72
-  use_cluster: False
-  cpus_per_task: 4
+  use_cluster: True
+  cpus_per_task: 10 
   port_range: [10000, 65000]
   constraint: null
   # Uncomment for job array configuration
   job_array:
-    num_tasks: 100
+    num_tasks: 2
     task_index: 0
 
 # ============================================================================
@@ -440,4 +437,103 @@ submitit:
 # ============================================================================
 
 all_roboflow_supercategories:
-  - aquarium
+  # - -grccs
+  # - zebrasatasturias
+  # - cod-mw-warzone
+  - canalstenosis
+  # - label-printing-defect-version-2
+  # - new-defects-in-wood
+  # - orionproducts
+  # - aquarium-combined
+  # - varroa-mites-detection--test-set
+  # - clashroyalechardetector
+  # - stomata-cells
+  # - halo-infinite-angel-videogame
+  # - pig-detection
+  - urine-analysis1
+  # - aerial-sheep
+  # - orgharvest
+  # - actions
+  # - mahjong
+  # - liver-disease
+  - needle-base-tip-min-max
+  # - wheel-defect-detection
+  # - aircraft-turnaround-dataset
+  - xray
+  # - wildfire-smoke
+  # - spinefrxnormalvindr
+  # - ufba-425
+  # - speech-bubbles-detection
+  # - train
+  # - pill
+  - truck-movement
+  # - car-logo-detection
+  # - inbreast
+  # - sea-cucumbers-new-tiles
+  # - uavdet-small
+  # - penguin-finder-seg
+  # - aerial-airport
+  # - bibdetection
+  # - taco-trash-annotations-in-context
+  # - bees
+  # - recode-waste
+  # - screwdetectclassification
+  # - wine-labels
+  # - aerial-cows
+  # - into-the-vale
+  # - gwhd2021
+  - lacrosse-object-detection
+  # - defect-detection
+  # - dataconvert
+  # - x-ray-id
+  # - ball
+  # - tube
+  # - 2024-frc
+  # - crystal-clean-brain-tumors-mri-dataset
+  - grapes-5
+  # - human-detection-in-floods
+  # - buoy-onboarding
+  - apoce-aerial-photographs-for-object-detection-of-construction-equipment
+  # - l10ul502
+  # - floating-waste
+  # - deeppcb
+  # - ism-band-packet-detection
+  # - weeds4
+  # - invoice-processing
+  # - thermal-cheetah
+  # - tomatoes-2
+  # - marine-sharks
+  # - peixos-fish
+  # - sssod
+  - aerial-pool
+  # - countingpills
+  # - asphaltdistressdetection
+  # - roboflow-trained-dataset
+  # - everdaynew
+  # - underwater-objects
+  # - soda-bottles
+  # - dentalai
+  # - jellyfish
+  # - deepfruits
+  # - activity-diagrams
+  # - circuit-voltages
+  - all-elements
+  # - macro-segmentation
+  # - exploratorium-daphnia
+  # - signatures
+  # - conveyor-t-shirts
+  # - fruitjes
+  # - grass-weeds
+  # - infraredimageofpowerequipment
+  # - 13-lkc01
+  # - wb-prova
+  # - flir-camera-objects
+  # - paper-parts
+  # - football-player-detection
+  # - trail-camera
+  # - smd-components
+  # - water-meter
+  - nih-xray
+  # - the-dreidel-project
+  # - electric-pylon-detection-in-rsi
+  # - cable-damage

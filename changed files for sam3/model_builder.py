@@ -77,7 +77,7 @@ def _create_position_encoding(precompute_resolution=None):
 def _create_vit_backbone(compile_mode=None, use_fa3=False, use_rope_real=False):
     """Create ViT backbone for visual feature extraction."""
     return ViT(
-        img_size=512,
+        img_size=1008,
         pretrain_img_size=336,
         patch_size=14,
         embed_dim=1024,
@@ -192,7 +192,7 @@ def _create_transformer_decoder(use_fa3=False) -> TransformerDecoder:
         frozen=False,
         interaction_layer=None,
         dac_use_selfatt_ln=True,
-        resolution=512,
+        resolution=1008,
         stride=14,
         use_act_checkpoint=True,
         presence_token=True,
@@ -349,7 +349,7 @@ def _create_tracker_maskmem_backbone():
         normalize=True,
         scale=None,
         temperature=10000,
-        precompute_resolution=512,
+        precompute_resolution=1008,
     )
 
     # Mask processing components
@@ -461,7 +461,7 @@ def build_tracker(
         backbone = SAM3VLBackbone(scalp=1, visual=vision_backbone, text=None)
     # Create the Tracker module
     model = Sam3TrackerPredictor(
-        image_size=512,
+        image_size=1008,
         num_maskmem=7,
         backbone=backbone,
         backbone_stride=14,
@@ -514,7 +514,7 @@ def _create_vision_backbone(
 ) -> Sam3DualViTDetNeck:
     """Create SAM3 visual backbone with ViT and neck."""
     # Position encoding
-    position_encoding = _create_position_encoding(precompute_resolution=512)
+    position_encoding = _create_position_encoding(precompute_resolution=1008)
     # ViT backbone
     vit_backbone: ViT = _create_vit_backbone(compile_mode=compile_mode)
     vit_neck: Sam3DualViTDetNeck = _create_vit_neck(
@@ -654,22 +654,27 @@ def build_sam3_image_model(
     return model
 
 
-def download_ckpt_from_hf(version="sam3"):
-    """Download model checkpoint from HuggingFace Hub.
+import os
 
-    Args:
-        version: "sam3" or "sam3.1"
+def download_ckpt_from_hf(version="sam3"):
     """
+    Load model checkpoint from Kaggle Input directly (Offline Mode).
+    """
+    base_input_dir = "/kaggle/input/models/lhuyton/sam3pt/other/default/1"
+    
     if version == "sam3.1":
-        repo_id = "facebook/sam3.1"
         ckpt_name = "sam3.1_multiplex.pt"
-        cfg_name = "config.json"
     else:
-        repo_id = "facebook/sam3"
-        ckpt_name = "sam3.pt"
-        cfg_name = "config.json"
-    _ = hf_hub_download(repo_id=repo_id, filename=cfg_name)
-    checkpoint_path = hf_hub_download(repo_id=repo_id, filename=ckpt_name)
+        ckpt_name = "sam3.pt" 
+        
+    checkpoint_path = os.path.join(base_input_dir, ckpt_name)
+    
+    # In ra một dòng log nhỏ để bạn dễ debug xem đường dẫn đã chuẩn chưa
+    print(f"[Offline Mode] Loading checkpoint directly from: {checkpoint_path}")
+    
+    if not os.path.exists(checkpoint_path):
+        raise FileNotFoundError(f"Không tìm thấy file weights tại: {checkpoint_path}. Hãy kiểm tra lại đường dẫn Kaggle Input!")
+        
     return checkpoint_path
 
 
@@ -760,7 +765,7 @@ def build_sam3_video_model(
             recondition_every_nth_frame=16,
             masklet_confirmation_enable=False,
             decrease_trk_keep_alive_for_empty_masklets=False,
-            image_size=512,
+            image_size=1008,
             image_mean=(0.5, 0.5, 0.5),
             image_std=(0.5, 0.5, 0.5),
             compile_model=compile,
@@ -787,7 +792,7 @@ def build_sam3_video_model(
             recondition_every_nth_frame=0,
             masklet_confirmation_enable=False,
             decrease_trk_keep_alive_for_empty_masklets=False,
-            image_size=512,
+            image_size=1008,
             image_mean=(0.5, 0.5, 0.5),
             image_std=(0.5, 0.5, 0.5),
             compile_model=compile,
@@ -827,7 +832,7 @@ def _create_multiplex_maskmem_backbone(multiplex_count=16):
         normalize=True,
         scale=None,
         temperature=10000,
-        precompute_resolution=512,
+        precompute_resolution=1008,
     )
 
     mask_downsampler = SimpleMaskDownSampler(
@@ -921,7 +926,7 @@ def _create_multiplex_tri_backbone(
     compile_mode=None, use_fa3=False, use_rope_real=False
 ):
     """Create the TriHead vision backbone for multiplex model."""
-    position_encoding = _create_position_encoding(precompute_resolution=512)
+    position_encoding = _create_position_encoding(precompute_resolution=1008)
     vit_backbone = _create_vit_backbone(
         compile_mode=compile_mode, use_fa3=use_fa3, use_rope_real=use_rope_real
     )
@@ -987,7 +992,7 @@ def build_sam3_multiplex_video_model(
         transformer=transformer,
         maskmem_backbone=maskmem_backbone,
         multiplex_controller=multiplex_controller,
-        image_size=512,
+        image_size=1008,
         backbone_stride=14,
         num_maskmem=7,
         # Multiplex-specific settings
@@ -1191,7 +1196,7 @@ def build_sam3_multiplex_video_predictor(
         max_num_kboxes=0,
         sprinkle_removal_area=0,
         is_multiplex=True,
-        image_size=512,
+        image_size=1008,
         image_mean=(0.5, 0.5, 0.5),
         image_std=(0.5, 0.5, 0.5),
         compile_model=compile,
